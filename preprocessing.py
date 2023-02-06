@@ -1,9 +1,12 @@
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder, Normalizer, normalize
 
+
 if __name__ == '__main__':
+    normalize_by_sensor_type = False
+
     dtypes = {
-            'type_sensor_1': 'cat', 'type_sensor_2': 'category', 'type_sensor_3': 'category'
+            'type_sensor_1': 'category', 'type_sensor_2': 'category', 'type_sensor_3': 'category'
     }
     train_df = pd.read_csv(
             'training_6_category_1/prepped_data.csv', dtype=dtypes,
@@ -53,10 +56,11 @@ if __name__ == '__main__':
             ], ignore_index=True
     )
 
-    ssn_g = Normalizer()
-    ssn_g.fit(ss_data.loc[ss_data['type'] == 0, ['signal_strength']])
-    ssn_r = Normalizer()
-    ssn_r.fit(ss_data.loc[ss_data['type'] == 1, ['signal_strength']])
+    if normalize_by_sensor_type:
+        ssn_g = Normalizer()
+        ssn_g.fit(ss_data.loc[ss_data['type'] == 0, ['signal_strength']])
+        ssn_r = Normalizer()
+        ssn_r.fit(ss_data.loc[ss_data['type'] == 1, ['signal_strength']])
 
     # Collect timestamps
     ts_data = train_df['timestamp_1'].rename({'timestamp_1': 'timestamp'})
@@ -103,35 +107,58 @@ if __name__ == '__main__':
     )
 
     # Fit normalizer
-    fit_df = pd.concat([ts_data, slat_data, slong_data, sh_data], axis=1)
-    fit_df.columns
+    if normalize_by_sensor_type:
+        fit_df = pd.concat([ts_data, slat_data, slong_data, sh_data], axis=1)
+        fit_df.columns = ['timestamp', 'latitude_sensor', 'longitude_sensor', 'height_sensor']
+    else:
+        fit_df = pd.concat([ss_data['signal_strength'], ts_data, slat_data, slong_data, sh_data], axis=1)
+        fit_df.columns = ['signal_strength', 'timestamp', 'latitude_sensor', 'longitude_sensor', 'height_sensor']
+    print(fit_df.columns)
     normalizer = Normalizer()
     normalizer.fit(fit_df)
 
     for n in ['1', '2', '3']:
-        g_indices = train_df.loc[train_df['type_sensor_' + n] == 0, ['signal_strength_' + n]].index
-        r_indices = train_df.loc[train_df['type_sensor_' + n] == 1, ['signal_strength_' + n]].index
-        train_df.loc[g_indices, ['signal_strength_' + n]] = ssn_g.transform(
-                train_df.loc[g_indices, ['signal_strength_' + n]].rename(
-                        columns={'signal_strength_' + n: 'signal_strength'}
-                )
-        )
-        train_df.loc[r_indices, ['signal_strength_' + n]] = ssn_r.transform(
-                train_df.loc[r_indices, ['signal_strength_' + n]].rename(
-                        columns={'signal_strength_' + n: 'signal_strength'}
-                )
-        )
+        if normalize_by_sensor_type:
+            g_indices = train_df.loc[train_df['type_sensor_' + n] == 0, ['signal_strength_' + n]].index
+            r_indices = train_df.loc[train_df['type_sensor_' + n] == 1, ['signal_strength_' + n]].index
+            train_df.loc[g_indices, ['signal_strength_' + n]] = ssn_g.transform(
+                    train_df.loc[g_indices, ['signal_strength_' + n]].rename(
+                            columns={'signal_strength_' + n: 'signal_strength'}
+                    )
+            )
+            train_df.loc[r_indices, ['signal_strength_' + n]] = ssn_r.transform(
+                    train_df.loc[r_indices, ['signal_strength_' + n]].rename(
+                            columns={'signal_strength_' + n: 'signal_strength'}
+                    )
+            )
 
-        train_df[['timestamp_' + n, 'latitude_sensor_' + n, 'longitude_sensor_' + n,
-                  'height_sensor_' + n]] = normalizer.transform(
-                train_df[['timestamp_' + n,
-                          'latitude_sensor_' +
-                          n, 'longitude_sensor_' + n, 'height_sensor_' + n]].rename(
-                        columns={
-                                'timestamp_' + n: 'timestamp', 'latitude_sensor_' + n: 'latitude_sensor',
-                                'longitude_sensor_' + n: 'longitude_sensor', 'height_sensor_' + n: 'height_sensor'
-                        }
-                )
-        )
+        if normalize_by_sensor_type:
+            train_df[['timestamp_' + n, 'latitude_sensor_' + n, 'longitude_sensor_' + n,
+                      'height_sensor_' + n]] = normalizer.transform(
+                    train_df[['timestamp_' + n,
+                              'latitude_sensor_' +
+                              n, 'longitude_sensor_' + n, 'height_sensor_' + n]].rename(
+                            columns={
+                                    'timestamp_' + n: 'timestamp', 'latitude_sensor_' + n: 'latitude_sensor',
+                                    'longitude_sensor_' + n: 'longitude_sensor', 'height_sensor_' + n: 'height_sensor'
+                            }
+                    )
+            )
+        else:
+            train_df[['signal_strength_' + n, 'timestamp_' + n, 'latitude_sensor_' + n, 'longitude_sensor_' + n,
+                      'height_sensor_' + n]] = normalizer.transform(
+                    train_df[['signal_strength_' + n, 'timestamp_' + n,
+                              'latitude_sensor_' +
+                              n, 'longitude_sensor_' + n, 'height_sensor_' + n]].rename(
+                            columns={
+                                    'signal_strength_' + n: 'signal_strength',
+                                    'timestamp_' + n: 'timestamp', 'latitude_sensor_' + n: 'latitude_sensor',
+                                    'longitude_sensor_' + n: 'longitude_sensor', 'height_sensor_' + n: 'height_sensor'
+                            }
+                    )
+            )
 
-    train_df.to_csv('training_6_category_1/preprocessed.csv', index=False)
+    if normalize_by_sensor_type:
+        train_df.to_csv('training_6_category_1/preprocessed_sensor_by_type.csv', index=False)
+    else:
+        train_df.to_csv('training_6_category_1/preprocessed.csv', index=False)
