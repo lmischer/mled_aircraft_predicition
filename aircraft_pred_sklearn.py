@@ -1,8 +1,9 @@
+import pickle
+
 import pandas as pd
 from sklearn.linear_model import LinearRegression, MultiTaskElasticNet
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import r2_score, mean_squared_error
 
 
 if __name__ == '__main__':
@@ -16,34 +17,20 @@ if __name__ == '__main__':
     X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.3, random_state=42)
 
     # Simple Linear Regression Prediction
-    lr = MultiOutputRegressor(LinearRegression()).fit(X_train, y_train[['longitude_aircraft',
+    print('Multi Output Regression')
+    mlr = MultiOutputRegressor(LinearRegression()).fit(X_train, y_train[['longitude_aircraft',
                                                                                 'latitude_aircraft']])
-    pred = lr.predict(X_test)
-
-    print('Linear Regression')
-    print(f"r2 long: {r2_score(y_test['longitude_aircraft'], [long for long, lat in pred])}")
-    print(f"r2 lat: {r2_score(y_test['latitude_aircraft'], [lat for long, lat in pred])}")
-    print(f"mse long: {mean_squared_error(y_test['longitude_aircraft'], [long for long, lat in pred])}")
-    print(f"mse lat: {mean_squared_error(y_test['latitude_aircraft'], [lat for long, lat in pred])}\n\n")
+    with open('models/mlr_model_aircraft_pred_no_alt.pkl', 'wb') as mlr_no_alt_fh:
+        pickle.dump(mlr, mlr_no_alt_fh)
 
     # Multitask Elastic Net Prediction
-    men = MultiTaskElasticNet(random_state=42).fit(X_train, y_train[['longitude_aircraft', 'latitude_aircraft']])
-
-    pred = men.predict(X_test)
-
     print('Multitask Elastic Net')
-    print(f"r2 long: {r2_score(y_test['longitude_aircraft'], [long for long, lat in pred])}")
-    print(f"r2 lat: {r2_score(y_test['latitude_aircraft'], [lat for long, lat in pred])}")
-    print(f"mse long: {mean_squared_error(y_test['longitude_aircraft'], [long for long, lat in pred])}")
-    print(f"mse lat: {mean_squared_error(y_test['latitude_aircraft'], [lat for long, lat in pred])}\n\n")
+    men = MultiTaskElasticNet(random_state=42).fit(X_train, y_train[['longitude_aircraft', 'latitude_aircraft']])
+    with open('models/men_model_aircraft_pred_no_alt.pkl', 'wb') as men_no_alt_fh:
+        pickle.dump(men, men_no_alt_fh)
 
     # Multitask Elastic Net Prediction with altitude
-    men = MultiTaskElasticNet(random_state=42).fit(X_train, y_train)
-
-    pred = men.predict(X_test)
-
     print('Multitask Elastic Net')
-    print(f"r2 long: {r2_score(y_test['longitude_aircraft'], [long for lat, long, geo, baro  in pred])}")
-    print(f"r2 lat: {r2_score(y_test['latitude_aircraft'], [lat for lat, long, geo, baro in pred])}")
-    print(f"mse long: {mean_squared_error(y_test['longitude_aircraft'], [long for lat, long, geo, baro in pred])}")
-    print(f"mse lat: {mean_squared_error(y_test['latitude_aircraft'], [lat for lat, long, geo, baro in pred])}\n\n")
+    men = MultiTaskElasticNet(random_state=42).fit(X_train, y_train)
+    with open('models/men_model_aircraft_pred.pkl', 'wb') as men_fh:
+        pickle.dump(men, men_fh)
