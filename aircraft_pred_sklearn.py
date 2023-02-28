@@ -1,7 +1,7 @@
 import pickle
 
 import pandas as pd
-from sklearn.linear_model import LinearRegression, MultiTaskElasticNet
+from sklearn.linear_model import LinearRegression, MultiTaskElasticNet, MultiTaskElasticNetCV
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.model_selection import train_test_split
 
@@ -18,8 +18,10 @@ if __name__ == '__main__':
 
     # Simple Linear Regression Prediction
     print('Multi Output Regression')
-    mlr = MultiOutputRegressor(LinearRegression()).fit(X_train, y_train[['longitude_aircraft',
-                                                                                'latitude_aircraft']])
+    mlr = MultiOutputRegressor(LinearRegression()).fit(
+            X_train,
+            y_train[['longitude_aircraft', 'latitude_aircraft']]
+    )
     with open('models/mlr_model_aircraft_pred_no_alt.pkl', 'wb') as mlr_no_alt_fh:
         pickle.dump(mlr, mlr_no_alt_fh)
 
@@ -30,7 +32,16 @@ if __name__ == '__main__':
         pickle.dump(men, men_no_alt_fh)
 
     # Multitask Elastic Net Prediction with altitude
-    print('Multitask Elastic Net')
+    print('Multitask Elastic Net with altitude')
     men = MultiTaskElasticNet(random_state=42).fit(X_train, y_train)
     with open('models/men_model_aircraft_pred.pkl', 'wb') as men_fh:
+        pickle.dump(men, men_fh)
+
+    # Multitask Elastic Net Prediction l1
+    print('Multitask Elastic Net L1')
+    men = MultiTaskElasticNetCV(l1_ratio=[.1, .5, .7, .9, .95, .99, 1], n_jobs=-1, random_state=42, verbose=1).fit(
+            X_train,
+            y_train
+    )
+    with open('models/men_model_aircraft_pred_l1.pkl', 'wb') as men_fh:
         pickle.dump(men, men_fh)
